@@ -67,15 +67,15 @@ public class DataParser {
             if (!googlePlaceJson.isNull("vicinity")) {
                 vicinity = googlePlaceJson.getString("vicinity");
             }
-            if (!googlePlaceJson.isNull("international_phone_number")) {
-                formatted_phone_number = googlePlaceJson.getString("international_phone_number");
+            if (!googlePlaceJson.isNull("formatted_phone_number")) {
+                formatted_phone_number = googlePlaceJson.getString("formatted_phone_number");
             }
             latitude = googlePlaceJson.getJSONObject("geometry").getJSONObject("location").getString("lat");
             longitude = googlePlaceJson.getJSONObject("geometry").getJSONObject("location").getString("lng");
             reference = googlePlaceJson.getString("reference");
             googlePlaceMap.put("place_name", placeName);
             googlePlaceMap.put("vicinity", vicinity);
-            googlePlaceMap.put("international_phone_number", formatted_phone_number);
+            googlePlaceMap.put("formatted_phone_number", formatted_phone_number);
             googlePlaceMap.put("lat", latitude);
             googlePlaceMap.put("lng", longitude);
             googlePlaceMap.put("reference", reference);

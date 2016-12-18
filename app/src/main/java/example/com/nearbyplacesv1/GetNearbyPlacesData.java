@@ -55,7 +55,7 @@ public class GetNearbyPlacesData extends AsyncTask<Object, String, String> {
             double lng = Double.parseDouble(googlePlace.get("lng"));
             String placeName = googlePlace.get("place_name");
             String vicinity = googlePlace.get("vicinity");
-            String formatted_phone_number = googlePlace.get("international_phone_number");
+            String formatted_phone_number = googlePlace.get("formatted_phone_number");
             LatLng latLng = new LatLng(lat, lng);
             markerOptions.position(latLng);
             markerOptions.title(placeName + " : " + vicinity);
