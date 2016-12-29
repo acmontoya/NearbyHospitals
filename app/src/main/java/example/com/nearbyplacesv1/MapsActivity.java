@@ -10,6 +10,7 @@ import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.content.ContextCompat;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -18,9 +19,13 @@ import android.widget.Toast;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.places.Place;
+import com.google.android.gms.location.places.PlaceBuffer;
+import com.google.android.gms.location.places.Places;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -38,9 +43,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         LocationListener {
 
     private GoogleMap mMap;
-    double latitude;
-    double longitude;
-    private int PROXIMITY_RADIUS = 20000;
+    double latitude, longitude;
+    private static final int GOOGLE_API_CLIENT_ID = 0;
+    String reference = "";
     GoogleApiClient mGoogleApiClient;
     Location mLastLocation;
     Marker mCurrLocationMarker;
@@ -54,13 +59,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             checkLocationPermission();
         }
-
-        //Check if Google Play Services Available or not
         if (!CheckGooglePlayServices()) {
             Log.d("onCreate", "Finishing test case since Google Play Services are not available");
             finish();
-        }
-        else {
+        } else {
             Log.d("onCreate","Google Play Services available.");
         }
 
@@ -97,9 +99,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
         mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
-        String uri = String.format(Locale.ENGLISH, "http://maps.google.com/maps?daddr=%f,%f (%s)", 12f, 2f, "Where the party is at");
-        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
-        intent.setClassName("com.google.android.apps.maps", "com.google.android.maps.MapsActivity");
 
         mMap.setOnInfoWindowClickListener(new GoogleMap.OnInfoWindowClickListener() {
 
@@ -125,10 +124,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         });
 
-
-
-
-
         //Initialize Google Play Services
         if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (ContextCompat.checkSelfPermission(this,
@@ -143,7 +138,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             mMap.setMyLocationEnabled(true);
         }
 
-
         Button btnHospital = (Button) findViewById(R.id.btnHospital);
         btnHospital.setOnClickListener(new View.OnClickListener() {
             String Hospital = "hospital";
@@ -152,25 +146,43 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 Log.d("onClick", "Button is Clicked");
                 mMap.clear();
                 String url = getUrl(latitude, longitude, Hospital);
-                Object[] DataTransfer = new Object[2];
+                String placeDetails = getPlaceDetails(reference);
+                Object[] DataTransfer = new Object[3];
                 DataTransfer[0] = mMap;
                 DataTransfer[1] = url;
+                DataTransfer[2] = placeDetails;
                 Log.d("onClick", url);
                 GetNearbyPlacesData getNearbyPlacesData = new GetNearbyPlacesData();
                 getNearbyPlacesData.execute(DataTransfer);
                 Toast.makeText(MapsActivity.this,"Nearby Hospitals", Toast.LENGTH_LONG).show();
             }
         });
-
-
     }
 
+    private void findPlaceById( String id ) {
+        if( TextUtils.isEmpty( id ) || mGoogleApiClient == null || !mGoogleApiClient.isConnected() )
+            return;
+
+        Places.GeoDataApi.getPlaceById( mGoogleApiClient, id ) .setResultCallback( new ResultCallback<PlaceBuffer>() {
+            @Override
+            public void onResult(PlaceBuffer places) {
+                if( places.getStatus().isSuccess() ) {
+                    Place place = places.get( 0 );
+                    String phoneNum = (String) place.getPhoneNumber();
+                }
+
+                //Release the PlaceBuffer to prevent a memory leak
+                places.release();
+            }
+        } );
+    }
 
     protected synchronized void buildGoogleApiClient() {
-        mGoogleApiClient = new GoogleApiClient.Builder(this)
-                .addConnectionCallbacks(this)
-                .addOnConnectionFailedListener(this)
+        mGoogleApiClient = new GoogleApiClient.Builder(MapsActivity.this)
+                .addApi(Places.GEO_DATA_API)
                 .addApi(LocationServices.API)
+                .enableAutoManage(this, GOOGLE_API_CLIENT_ID, this)
+                .addConnectionCallbacks(this)
                 .build();
         mGoogleApiClient.connect();
     }
@@ -192,13 +204,25 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         StringBuilder googlePlacesUrl = new StringBuilder("https://maps.googleapis.com/maps/api/place/nearbysearch/json?");
         googlePlacesUrl.append("location=" + latitude + "," + longitude);
-        googlePlacesUrl.append("&radius=" + PROXIMITY_RADIUS);
+        googlePlacesUrl.append("&rankby=distance");
         googlePlacesUrl.append("&type=" + nearbyPlace);
         googlePlacesUrl.append("&sensor=true");
         googlePlacesUrl.append("&key=" + "AIzaSyATuUiZUkEc_UgHuqsBJa1oqaODI-3mLs0"); //dito yung api key nasa sticky note
         Log.d("getUrl", googlePlacesUrl.toString());
         return (googlePlacesUrl.toString());
     }
+
+    private String getPlaceDetails(String reference) {
+
+        StringBuilder googlePlacesDetailsUrl = new StringBuilder("https://maps.googleapis.com/maps/api/place/details/json?");
+        googlePlacesDetailsUrl.append("&reference=" + reference);
+        googlePlacesDetailsUrl.append("&key=" + "AIzaSyBRaI6vWSTL-W1cJm-SB60xNBjlbb8TMaU"); //dito yung api key nasa sticky note
+        //Main Key = AIzaSyATuUiZUkEc_UgHuqsBJa1oqaODI-3mLs0 - Angel's key
+        //Alternative Key = AIzaSyBRaI6vWSTL-W1cJm-SB60xNBjlbb8TMaU - Raeven's key
+        Log.d("getUrl", googlePlacesDetailsUrl.toString());
+        return (googlePlacesDetailsUrl.toString());
+    }
+
 
     @Override
     public void onConnectionSuspended(int i) {

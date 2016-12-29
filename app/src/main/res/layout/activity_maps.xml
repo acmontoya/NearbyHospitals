@@ -23,8 +23,7 @@
             android:id="@+id/btnHospital"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Nearby Hospitals"
-            android:layout_marginTop="625dp" />
+            android:text="Nearby Hospitals"/>
 
 
     </LinearLayout>

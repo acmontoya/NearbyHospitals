@@ -17,9 +17,9 @@ import java.util.List;
  */
 public class GetNearbyPlacesData extends AsyncTask<Object, String, String> {
 
-    String googlePlacesData;
+    String googlePlacesData, googlePlacesDetails;
     GoogleMap mMap;
-    String url;
+    String url, placeDetails;
 
     @Override
     protected String doInBackground(Object... params) {
@@ -27,8 +27,10 @@ public class GetNearbyPlacesData extends AsyncTask<Object, String, String> {
             Log.d("GetNearbyPlacesData", "doInBackground entered");
             mMap = (GoogleMap) params[0];
             url = (String) params[1];
+            placeDetails = (String) params[2];
             DownloadUrl downloadUrl = new DownloadUrl();
             googlePlacesData = downloadUrl.readUrl(url);
+            googlePlacesDetails = downloadUrl.readUrl(placeDetails);
             Log.d("GooglePlacesReadTask", "doInBackground Exit");
         } catch (Exception e) {
             Log.d("GooglePlacesReadTask", e.toString());
@@ -38,11 +40,14 @@ public class GetNearbyPlacesData extends AsyncTask<Object, String, String> {
 
     @Override
     protected void onPostExecute(String result) {
-        Log.d("GooglePlacesReadTask", "onPostExecute Entered");
+
         List<HashMap<String, String>> nearbyPlacesList = null;
+        List<HashMap<String, String>> placesDetails = null;
         DataParser dataParser = new DataParser();
         nearbyPlacesList =  dataParser.parse(result);
+        placesDetails = dataParser.parse(result);
         ShowNearbyPlaces(nearbyPlacesList);
+        ShowNearbyPlaces(placesDetails);
         Log.d("GooglePlacesReadTask", "onPostExecute Exit");
     }
 
@@ -56,10 +61,11 @@ public class GetNearbyPlacesData extends AsyncTask<Object, String, String> {
             String placeName = googlePlace.get("place_name");
             String vicinity = googlePlace.get("vicinity");
             String formatted_phone_number = googlePlace.get("formatted_phone_number");
+            String formatted_address = googlePlace.get("formatted_address");
             LatLng latLng = new LatLng(lat, lng);
             markerOptions.position(latLng);
             markerOptions.title(placeName + " : " + vicinity);
-            markerOptions.snippet(vicinity + formatted_phone_number);
+            markerOptions.snippet(formatted_phone_number);
             mMap.addMarker(markerOptions);
             markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED));
             //move map camera
@@ -67,4 +73,6 @@ public class GetNearbyPlacesData extends AsyncTask<Object, String, String> {
             mMap.animateCamera(CameraUpdateFactory.zoomTo(11));
         }
     }
+
+
 }
